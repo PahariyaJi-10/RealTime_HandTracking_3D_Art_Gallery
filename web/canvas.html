@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hand Drawing Canvas</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #ffffff; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<canvas id="drawCanvas"></canvas>
+
+<script>
+let canvas = document.getElementById("drawCanvas");
+let ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let points = [];
+
+ctx.lineCap = "round";
+ctx.lineJoin = "round";
+ctx.strokeStyle = "black";
+ctx.lineWidth = 4;
+
+// 🔥 WebSocket
+let socket = new WebSocket("ws://localhost:8765");
+
+socket.onopen = () => {
+    console.log("Connected to server");
+};
+
+socket.onerror = (err) => {
+    console.log("WebSocket error:", err);
+};
+
+socket.onmessage = function(event) {
+
+    console.log("DATA:", event.data);  // 👈 DEBUG
+
+    let parts = event.data.split(",");
+    if (parts.length < 3) return;
+
+    let x = parseFloat(parts[0]);
+    let y = parseFloat(parts[1]);
+    let pinch = parts[2];
+
+    let drawX = (x / screen.width) * canvas.width;
+    let drawY = (y / screen.height) * canvas.height;
+
+    if (pinch == "1") {
+
+        points.push({x: drawX, y: drawY});
+
+        if (points.length > 10) points.shift();
+
+        if (points.length < 3) return;
+
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+
+        for (let i = 1; i < points.length - 2; i++) {
+            let xc = (points[i].x + points[i + 1].x) / 2;
+            let yc = (points[i].y + points[i + 1].y) / 2;
+
+            ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+        }
+
+        ctx.stroke();
+
+    } else {
+        points = [];
+    }
+};
+</script>
+
+
+</body>
+</html>

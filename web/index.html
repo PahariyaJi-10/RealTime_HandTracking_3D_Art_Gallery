@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Hand Controlled Gallery</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+<script>
+    // Scene setup
+    let scene = new THREE.Scene();
+
+    let camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    );
+
+    let renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Floor
+    let floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(10, 10),
+        new THREE.MeshBasicMaterial({ color: 0xdddddd })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+    scene.background = new THREE.Color(0xf5f5f5);
+    // Wall
+    let wall = new THREE.Mesh(
+        new THREE.BoxGeometry(10, 3, 0.1),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    wall.position.z = -5;
+    wall.position.y = 1.5;
+    scene.add(wall);
+
+    // Painting
+    let painting = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 1.5, 0.1),
+        new THREE.MeshBasicMaterial({ color: 0x4a90e2 })
+    );
+    painting.position.z = -4.9;
+    painting.position.y = 1.5;
+    scene.add(painting);
+
+    // Initial camera position
+    camera.position.z = 2;
+    camera.position.y = 1.5;
+
+    // 🔥 WebSocket connection
+    let socket = new WebSocket("ws://localhost:8765");
+
+    socket.onopen = () => {
+        console.log("Connected to Python server");
+    };
+
+    socket.onmessage = function(event) {
+        let data = event.data.split(",");
+
+        let x = parseFloat(data[0]);
+        let y = parseFloat(data[1]);
+
+        // Move camera smoothly
+        camera.position.x = (x - window.innerWidth / 2) / 200;
+        camera.position.y = -(y - window.innerHeight / 2) / 200;
+    };
+
+    socket.onerror = (error) => {
+        console.log("WebSocket error:", error);
+    };
+
+    socket.onclose = () => {
+        console.log("Connection closed");
+    };
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+
+    animate();
+</script>
+
+</body>
+</html>
