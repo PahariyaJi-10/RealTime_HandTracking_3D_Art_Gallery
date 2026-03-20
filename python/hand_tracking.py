@@ -2,21 +2,24 @@ import cv2
 import mediapipe as mp
 import math
 import pyautogui
+import socket
+
+# Socket setup
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_address = ("127.0.0.1", 5052)
 
 # Screen size
 screen_width, screen_height = pyautogui.size()
 
-# Initialize MediaPipe
+# MediaPipe
 mp_hands = mp.solutions.hands 
 hands = mp_hands.Hands(min_detection_confidence=0.7,
                        min_tracking_confidence=0.7)
 
 mp_draw = mp.solutions.drawing_utils
 
-# Webcam
 cap = cv2.VideoCapture(0)
 
-# Smoothing
 prev_x, prev_y = 0, 0
 smoothening = 5
 
@@ -42,13 +45,11 @@ while True:
             for id, lm in enumerate(handLms.landmark):
                 cx, cy = int(lm.x * w), int(lm.y * h)
 
-                if id == 8:  # Index
+                if id == 8:
                     index_tip = (cx, cy)
-                    cv2.circle(img, (cx, cy), 10, (255, 0, 0), cv2.FILLED)
 
-                if id == 4:  # Thumb
+                if id == 4:
                     thumb_tip = (cx, cy)
-                    cv2.circle(img, (cx, cy), 10, (0, 255, 0), cv2.FILLED)
 
             if thumb_tip and index_tip:
                 x1, y1 = thumb_tip
@@ -56,11 +57,11 @@ while True:
 
                 distance = math.hypot(x2 - x1, y2 - y1)
 
-                # Map to screen
+                # Screen mapping
                 screen_x = int(x2 * screen_width / w)
                 screen_y = int(y2 * screen_height / h)
 
-                # Smooth
+                # Smooth movement
                 curr_x = prev_x + (screen_x - prev_x) / smoothening
                 curr_y = prev_y + (screen_y - prev_y) / smoothening
 
@@ -69,16 +70,15 @@ while True:
                 # Move mouse
                 pyautogui.moveTo(curr_x, curr_y)
 
-                # Click (pinch)
+                # Send to web (future)
+                data = f"{int(curr_x)},{int(curr_y)}"
+                sock.sendto(data.encode(), server_address)
+
+                # Click
                 if distance < 40:
                     pyautogui.click()
-                    cv2.putText(img, "CLICK", (50, 100),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
-                else:
-                    cv2.putText(img, "MOVE", (50, 100),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
 
-    cv2.imshow("Hand Mouse Control", img)
+    cv2.imshow("Hand Control", img)
 
     if cv2.waitKey(1) & 0xFF == 27:
         break
