@@ -33,6 +33,7 @@
 let colorPicker = document.getElementById("colorPicker");
 let brushSize = document.getElementById("brushSize");
 let clearBtn = document.getElementById("clearBtn");
+
 let canvas = document.getElementById("drawCanvas");
 let ctx = canvas.getContext("2d");
 
@@ -43,40 +44,32 @@ let points = [];
 
 ctx.lineCap = "round";
 ctx.lineJoin = "round";
-ctx.strokeStyle = "black";
-ctx.lineWidth = 4;
 
-// 🔥 WebSocket
+// WebSocket
 let socket = new WebSocket("ws://localhost:8765");
 
 socket.onopen = () => {
     console.log("Connected to server");
 };
 
-socket.onerror = (err) => {
-    console.log("WebSocket error:", err);
-};
-
 socket.onmessage = function(event) {
 
-    console.log("DATA:", event.data);  // 👈 DEBUG
+    console.log("DATA:", event.data);
 
-    let parts = event.data.split(",");
-    if (parts.length < 3) return;
+    // 🔥 ADD THIS HERE
+    let [x, y, draw] = event.data.split(",");
 
-    let x = parseFloat(parts[0]);
-    let y = parseFloat(parts[1]);
-    let pinch = parts[2];
+    x = parseFloat(x);
+    y = parseFloat(y);
 
     let drawX = (x / screen.width) * canvas.width;
     let drawY = (y / screen.height) * canvas.height;
 
-    if (pinch == "1") {
+    if (draw == "1") {
 
         points.push({x: drawX, y: drawY});
 
         if (points.length > 10) points.shift();
-
         if (points.length < 3) return;
 
         ctx.beginPath();
@@ -88,14 +81,19 @@ socket.onmessage = function(event) {
 
             ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
         }
-  ctx.strokeStyle = colorPicker.value;
-ctx.lineWidth = brushSize.value;
+
+        // 🔥 USE GESTURE COLOR
+        ctx.strokeStyle = color || colorPicker.value;
+        ctx.lineWidth = brushSize.value;
+
         ctx.stroke();
 
     } else {
         points = [];
     }
 };
+
+// Clear button
 clearBtn.onclick = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 };
