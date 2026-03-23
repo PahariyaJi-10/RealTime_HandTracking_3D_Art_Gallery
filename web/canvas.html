@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    let saveBtn = document.getElementById("saveBtn");
     <title>Hand Drawing Canvas</title>
     <style>
         body { margin: 0; overflow: hidden; background: #ffffff; }
@@ -15,8 +16,10 @@
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
     z-index: 10;
+    
 }
     </style>
+    <button id="saveBtn">Save</button>
 </head>
 <body>
 
@@ -96,6 +99,19 @@ socket.onmessage = function(event) {
 // Clear button
 clearBtn.onclick = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+};
+saveBtn.onclick = () => {
+
+    // Convert canvas to image
+    let image = canvas.toDataURL("image/png");
+
+    // Create download link
+    let link = document.createElement("a");
+    link.href = image;
+    link.download = "my_drawing.png";
+
+    // Trigger download
+    link.click();
 };
 </script>
 
