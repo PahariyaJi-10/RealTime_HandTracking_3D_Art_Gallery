@@ -31,7 +31,7 @@ def process_hand():
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     results = hands.process(img_rgb)
 
-    draw_state = 0  # 1 = draw, 0 = stop
+    mode = "stop"  # draw / erase / stop
 
     if results.multi_hand_landmarks:
         for handLms in results.multi_hand_landmarks:
@@ -40,39 +40,46 @@ def process_hand():
 
             h, w, _ = img.shape
 
-            # 👉 Get index finger tip
+            # 👉 Index tip & pip
             index_tip = handLms.landmark[8]
             index_pip = handLms.landmark[6]
+
+            middle_tip = handLms.landmark[12]
+            middle_pip = handLms.landmark[10]
 
             # Convert to pixels
             x = int(index_tip.x * w)
             y = int(index_tip.y * h)
 
-            # 👉 Map to screen
+            # Screen mapping
             screen_x = int(x * screen_width / w)
             screen_y = int(y * screen_height / h)
 
-            # 👉 Smooth movement
+            # Smooth movement
             curr_x = prev_x * 0.7 + screen_x * 0.3
             curr_y = prev_y * 0.7 + screen_y * 0.3
 
             prev_x, prev_y = curr_x, curr_y
 
-            # 👉 INDEX FINGER UP DETECTION
-            if index_tip.y < index_pip.y:
-                draw_state = 1
-            else:
-                draw_state = 0
+            # 👉 Finger detection
+            index_up = index_tip.y < index_pip.y
+            middle_up = middle_tip.y < middle_pip.y
 
-            print(int(curr_x), int(curr_y), draw_state)
+            if index_up and not middle_up:
+                mode = "draw"
+            elif index_up and middle_up:
+                mode = "erase"
+            else:
+                mode = "stop"
+
+            print(int(curr_x), int(curr_y), mode)
 
     cv2.imshow("Hand Tracking", img)
 
     if cv2.waitKey(1) & 0xFF == 27:
         return "exit"
 
-    return f"{int(curr_x)},{int(curr_y)},{draw_state}"
-
+    return f"{int(curr_x)},{int(curr_y)},{mode}"
 
 # WebSocket
 async def handler(websocket):

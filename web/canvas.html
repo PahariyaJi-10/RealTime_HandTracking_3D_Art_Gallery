@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    let saveBtn = document.getElementById("saveBtn");
-    <title>Hand Drawing Canvas</title>
+<title>Hand Drawing Canvas</title>
+
 <style>
 body {
     margin: 0;
@@ -15,7 +15,6 @@ canvas {
     display: block;
 }
 
-/* 🔥 Modern Control Panel */
 #controls {
     position: fixed;
     top: 20px;
@@ -31,61 +30,44 @@ canvas {
     z-index: 10;
 }
 
-/* Labels */
 #controls label {
     font-size: 12px;
     color: #333;
 }
 
-/* Inputs */
 #controls input[type="color"] {
     width: 100%;
     height: 40px;
-    border: none;
     border-radius: 8px;
-    cursor: pointer;
 }
 
 #controls input[type="range"] {
     width: 100%;
 }
 
-/* Buttons */
 #controls button {
     padding: 10px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
-    transition: 0.2s;
 }
 
-/* Clear button */
 #clearBtn {
     background: #ff4d4d;
     color: white;
 }
 
-#clearBtn:hover {
-    background: #e60000;
-}
-
-/* Save button */
 #saveBtn {
     background: #4CAF50;
     color: white;
 }
-
-#saveBtn:hover {
-    background: #2e7d32;
-}
 </style>
-    
 </head>
+
 <body>
 
 <div id="controls">
-
     <label>🎨 Color</label>
     <input type="color" id="colorPicker" value="#000000">
 
@@ -94,14 +76,15 @@ canvas {
 
     <button id="clearBtn">🧽 Clear</button>
     <button id="saveBtn">💾 Save</button>
-
 </div>
+
 <canvas id="drawCanvas"></canvas>
 
 <script>
 let colorPicker = document.getElementById("colorPicker");
 let brushSize = document.getElementById("brushSize");
 let clearBtn = document.getElementById("clearBtn");
+let saveBtn = document.getElementById("saveBtn");
 
 let canvas = document.getElementById("drawCanvas");
 let ctx = canvas.getContext("2d");
@@ -123,10 +106,7 @@ socket.onopen = () => {
 
 socket.onmessage = function(event) {
 
-    console.log("DATA:", event.data);
-
-    // 🔥 ADD THIS HERE
-    let [x, y, draw] = event.data.split(",");
+    let [x, y, mode] = event.data.split(",");
 
     x = parseFloat(x);
     y = parseFloat(y);
@@ -134,7 +114,7 @@ socket.onmessage = function(event) {
     let drawX = (x / screen.width) * canvas.width;
     let drawY = (y / screen.height) * canvas.height;
 
-    if (draw == "1") {
+    if (mode === "draw") {
 
         points.push({x: drawX, y: drawY});
 
@@ -151,36 +131,38 @@ socket.onmessage = function(event) {
             ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
         }
 
-        // 🔥 USE GESTURE COLOR
-        ctx.strokeStyle = color || colorPicker.value;
+        ctx.strokeStyle = colorPicker.value;
         ctx.lineWidth = brushSize.value;
-
         ctx.stroke();
+
+    } else if (mode === "erase") {
+
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, 20, 0, Math.PI * 2);
+        ctx.fillStyle = "#eef2f3"; // match background
+        ctx.fill();
+
+        points = [];
 
     } else {
         points = [];
     }
 };
 
-// Clear button
+// 🔥 BUTTONS (CORRECT PLACE)
 clearBtn.onclick = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 };
-saveBtn.onclick = () => {
 
-    // Convert canvas to image
+saveBtn.onclick = () => {
     let image = canvas.toDataURL("image/png");
 
-    // Create download link
     let link = document.createElement("a");
     link.href = image;
-    link.download = "my_drawing.png";
-
-    // Trigger download
+    link.download = "drawing_" + Date.now() + ".png";
     link.click();
 };
 </script>
-
 
 </body>
 </html>
