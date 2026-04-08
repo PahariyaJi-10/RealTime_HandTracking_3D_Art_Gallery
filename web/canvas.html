@@ -52,8 +52,8 @@ canvas {
 .gallery-item img {
     width: 100%;
     height: 100%;
-    object-fit: cover;   /* ⭐ KEY LINE */
-    cursor: pointer;
+    object-fit: contain;   /* ⭐ KEY LINE */
+    background: white;
 }
 .gallery-item:hover {
     transform: scale(1.05);
@@ -189,7 +189,8 @@ function loadGallery() {
 
         // ✅ CLICK HANDLER
         img.onclick = () => {
-            window.open(imgData, "_blank");
+            let newTab = window.open();
+    newTab.document.write("<img src='" + imgData + "' style='width:100%'>");
         };
 
         // ✅ WRAPPER CARD
