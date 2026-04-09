@@ -9,105 +9,104 @@ screen_width, screen_height = pyautogui.size()
 
 # MediaPipe
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(min_detection_confidence=0.7,
-                       min_tracking_confidence=0.7)
-
+hands = mp_hands.Hands(
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.7
+)
 mp_draw = mp.solutions.drawing_utils
 
+# Camera
 cap = cv2.VideoCapture(0)
 
+# 🔥 IMPORTANT (initialize smoothing vars)
 prev_x, prev_y = 0, 0
 curr_x, curr_y = 0, 0
 
 
-def process_hand():
+async def handler(websocket):
     global prev_x, prev_y, curr_x, curr_y
 
-    success, img = cap.read()
-    if not success:
-        return None
+    print("✅ Browser connected")
 
-    img = cv2.flip(img, 1)
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    results = hands.process(img_rgb)
+    while True:
+        success, img = cap.read()
+        if not success:
+            break
 
-    mode = "stop"  # draw / erase / stop
+        img = cv2.flip(img, 1)
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        results = hands.process(rgb)
 
-    if results.multi_hand_landmarks:
-        for handLms in results.multi_hand_landmarks:
+        mode = "stop"
+        send_data = None
 
-            mp_draw.draw_landmarks(img, handLms, mp_hands.HAND_CONNECTIONS)
+        if results.multi_hand_landmarks:
+            for handLms in results.multi_hand_landmarks:
 
-            h, w, _ = img.shape
+                mp_draw.draw_landmarks(img, handLms, mp_hands.HAND_CONNECTIONS)
 
-            # 👉 Index tip & pip
-            index_tip = handLms.landmark[8]
-            index_pip = handLms.landmark[6]
+                h, w, _ = img.shape
 
-            middle_tip = handLms.landmark[12]
-            middle_pip = handLms.landmark[10]
+                index_tip = handLms.landmark[8]
+                index_pip = handLms.landmark[6]
 
-            # Convert to pixels
-            x = int(index_tip.x * w)
-            y = int(index_tip.y * h)
+                middle_tip = handLms.landmark[12]
+                middle_pip = handLms.landmark[10]
 
-            # Screen mapping
-            screen_x = int(x * screen_width / w)
-            screen_y = int(y * screen_height / h)
+                # Pixel position
+                x = int(index_tip.x * w)
+                y = int(index_tip.y * h)
 
-            # Smooth movement
-            curr_x = prev_x * 0.7 + screen_x * 0.3
-            curr_y = prev_y * 0.7 + screen_y * 0.3
+                # Highlight
+                cv2.circle(img, (x, y), 10, (0, 255, 0), -1)
 
-            prev_x, prev_y = curr_x, curr_y
+                # 🔥 SCREEN MAPPING
+                screen_x = int(x * screen_width / w)
+                screen_y = int(y * screen_height / h)
 
-            # 👉 Finger detection
-            index_up = index_tip.y < index_pip.y
-            middle_up = middle_tip.y < middle_pip.y
+                # 🔥 PERFECT SMOOTHING
+                alpha = 0.6
+                curr_x = prev_x + (screen_x - prev_x) * alpha
+                curr_y = prev_y + (screen_y - prev_y) * alpha
 
-            if index_up and not middle_up:
-                mode = "draw"
-            elif index_up and middle_up:
-                mode = "erase"
-            else:
-                mode = "stop"
+                prev_x, prev_y = curr_x, curr_y
 
-            print(int(curr_x), int(curr_y), mode)
+                # 👉 Gesture detection
+                index_up = index_tip.y < index_pip.y
+                middle_up = middle_tip.y < middle_pip.y
 
-    cv2.imshow("Hand Tracking", img)
+                if index_up and not middle_up:
+                    mode = "draw"
+                elif index_up and middle_up:
+                    mode = "erase"
+                else:
+                    mode = "stop"
 
-    if cv2.waitKey(1) & 0xFF == 27:
-        return "exit"
+                # 🔥 SEND SMOOTHED DATA (FIXED)
+                send_data = f"{int(curr_x)},{int(curr_y)},{mode}"
 
-    return f"{int(curr_x)},{int(curr_y)},{mode}"
+        # Send data
+        if send_data:
+            await websocket.send(send_data)
 
-# WebSocket
-async def handler(websocket):
-    print("Browser connected")
+        # Show camera
+        cv2.imshow("Hand Tracking", img)
 
-    try:
-        while True:
-            data = process_hand()
+        if cv2.waitKey(1) & 0xFF == 27:
+            break
 
-            if data == "exit":
-                break
+        # 🔥 MINIMAL DELAY
+        await asyncio.sleep(0.001)
 
-            if data:
-                await websocket.send(data)
-
-            await asyncio.sleep(0.003)
-
-    except:
-        print("Browser disconnected safely")
+    cap.release()
+    cv2.destroyAllWindows()
 
 
 async def main():
+    print("🚀 Server started at ws://localhost:8765")
     async with websockets.serve(handler, "localhost", 8765):
-        print("Server started at ws://localhost:8765")
         await asyncio.Future()
 
 
-asyncio.run(main())
-
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    asyncio.run(main())
