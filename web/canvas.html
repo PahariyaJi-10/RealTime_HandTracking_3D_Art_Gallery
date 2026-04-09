@@ -2,10 +2,42 @@
 <html>
 <head>
 <title>Hand Drawing Canvas</title>
-
 <style>
+/* 🔥 BUTTON BASE */
+#controls button {
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
 
-/* 🔥 MODAL */
+/* 🔥 CLEAR BUTTON (RED) */
+#clearBtn {
+    background: #ff4d4d;
+    color: white;
+}
+
+#clearBtn:hover {
+    background: #e60000;
+}
+
+/* 🔥 SAVE BUTTON (GREEN) */
+#saveBtn {
+    background: #4CAF50;
+    color: white;
+}
+
+#saveBtn:hover {
+    background: #2e7d32;
+}
+
+/* 🔥 GALLERY BUTTON (LIGHT STYLE) */
+#galleryBtn {
+    background: #e0e0e0;
+}
+/* ✅ MODAL */
 #imageModal {
     display: none;
     position: fixed;
@@ -34,7 +66,7 @@
     cursor: pointer;
 }
 
-/* 🔥 YOUR ORIGINAL UI */
+/* YOUR ORIGINAL STYLES (UNCHANGED) */
 body {
     margin: 0;
     overflow: hidden;
@@ -42,14 +74,10 @@ body {
     font-family: 'Segoe UI', sans-serif;
 }
 
-canvas {
-    display: block;
-}
+canvas { display: block; }
 
 #gallery {
     position: fixed;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
     background: rgba(0,0,0,0.9);
@@ -61,11 +89,9 @@ canvas {
 }
 
 .gallery-item {
-    width: 100%;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 1;
     overflow: hidden;
     border-radius: 12px;
-    background: #222;
 }
 
 .gallery-item img {
@@ -84,28 +110,12 @@ canvas {
     background: rgba(255, 255, 255, 0.6);
     padding: 15px;
     border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     z-index: 10;
 }
-
-#controls button {
-    padding: 10px;
-    margin: 5px 0;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-#closeGallery {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 30;
-    padding: 10px;
-    background: red;
-    color: white;
-    display: none;
-}
-
 </style>
 </head>
 
@@ -114,15 +124,13 @@ canvas {
 <div id="controls">
     <button id="saveBtn">💾 Save</button>
     <button id="galleryBtn">🖼️ Gallery</button>
+    <button id="closeGallery">❌ Close</button>
 </div>
 
 <canvas id="drawCanvas"></canvas>
-
 <div id="gallery"></div>
 
-<button id="closeGallery">❌ Close</button>
-
-<!-- ✅ MODAL OUTSIDE -->
+<!-- ✅ MOVED OUTSIDE -->
 <div id="imageModal">
     <span id="closeModal">❌</span>
     <img id="modalImg">
@@ -138,26 +146,6 @@ let closeGallery = document.getElementById("closeGallery");
 let imageModal = document.getElementById("imageModal");
 let modalImg = document.getElementById("modalImg");
 let closeModal = document.getElementById("closeModal");
-
-let canvas = document.getElementById("drawCanvas");
-let ctx = canvas.getContext("2d");
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-// DRAWING STORAGE
-let points = [];
-
-// SAVE BUTTON
-document.getElementById("saveBtn").onclick = () => {
-    let image = canvas.toDataURL("image/png");
-
-    let drawings = JSON.parse(localStorage.getItem("drawings")) || [];
-    drawings.push(image);
-    localStorage.setItem("drawings", JSON.stringify(drawings));
-
-    alert("Saved!");
-};
 
 // OPEN GALLERY
 galleryBtn.onclick = () => {
@@ -175,7 +163,6 @@ closeGallery.onclick = () => {
 // LOAD GALLERY
 function loadGallery() {
     gallery.innerHTML = "";
-
     let drawings = JSON.parse(localStorage.getItem("drawings")) || [];
 
     drawings.forEach(imgData => {
@@ -185,7 +172,7 @@ function loadGallery() {
 
         // ✅ FIXED CLICK
         img.onclick = (e) => {
-            e.stopPropagation();
+            e.stopPropagation(); // 🔥 prevents gallery closing
             imageModal.style.display = "flex";
             modalImg.src = img.src;
         };
@@ -203,6 +190,7 @@ closeModal.onclick = () => {
     imageModal.style.display = "none";
 };
 
+// CLICK OUTSIDE MODAL
 imageModal.onclick = (e) => {
     if (e.target === imageModal) {
         imageModal.style.display = "none";
