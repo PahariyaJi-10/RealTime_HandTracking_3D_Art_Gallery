@@ -55,4 +55,3 @@ An AI-powered web application that allows users to draw on a canvas using real-t
 4. Gesture detection determines draw/erase/stop modes  
 5. Data is sent via WebSocket to the frontend  
 6. Canvas renders strokes in real-time  
-
